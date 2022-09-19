@@ -1,0 +1,7 @@
+# pak::pkg_install('iai')
+# pak::pkg_remove('iai')
+# library(iai)
+# install_julia()
+# iai:::iai_run_julia_setup()
+# install_system_image(replace_default = TRUE, accept_license = TRUE)
+# debugonce(install_system_image)
