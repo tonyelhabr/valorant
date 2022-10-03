@@ -15,11 +15,27 @@ events <- load_valorant('events') |> prettify_df()
 events
 
 series <- load_valorant('series') |> prettify_df()
-series
+series |> 
+  distinct(id, .keep_all = TRUE)
 
+series_urls <- series |> 
+  distinct(id, .keep_all = TRUE) |> 
+  mutate(
+    ribgg_url = sprintf(
+      'https://rib.gg/series/%s', 
+      id
+    )
+  ) |> 
+  unnest_wider(c(team1, team2), names_sep = '_') |> 
+  select(id, team1_name, team2_name, start_date, ribgg_url)
+series_urls
+series_urls |> 
+  filter(
+    ribgg_url |> stringr::str_detect('faze-clan-vs-100-thieves')
+  ) |> 
+  pull(ribgg_url)
+series |> unnest_wider(c(team1, team2), names_sep = '_') |> select(team1_name)
 matches <- load_valorant('matches')
-matches
-
 matches[[1]] |> names()
 
 map_pluck_matches <- function(element, f = map_int) {
@@ -30,10 +46,6 @@ tibble(
   match_id = map_pluck_matches('id'),
   team_1_id = map_pluck_matches('team1Id'),
   team_2_id = map_pluck_matches('team2Id')
-)
-hoist(
-  id = 'id',
-  team_1_id = 'team1Id'
 )
 
 match_details <- load_valorant('match_details')
@@ -64,7 +76,6 @@ economies <- match_details |>
   prettify_match_details('economies') 
 
 locations <- match_details |> prettify_match_details('locations')
-locations
 
 match_locations <- events |> 
   select(
@@ -108,6 +119,7 @@ match_locations <- events |>
       ),
     by = c('match_id', 'round_number', 'round_time_millis', 'player_id')
   )
+
 match_locations |> 
   filter(economy_weapon_id != weapon_id) |> 
   count(event_type)
