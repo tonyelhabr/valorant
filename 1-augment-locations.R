@@ -4,6 +4,8 @@ library(dplyr)
 library(purrr)
 library(tidyr)
 library(janitor)
+library(stringr)
+library(readr)
 
 prettify_df <- function(df) {
   df |> 
@@ -12,29 +14,32 @@ prettify_df <- function(df) {
 }
 
 events <- load_valorant('events') |> prettify_df()
-events
-
 series <- load_valorant('series') |> prettify_df()
-series |> 
-  distinct(id, .keep_all = TRUE)
 
-series_urls <- series |> 
+filt_series <- series |> 
   distinct(id, .keep_all = TRUE) |> 
-  mutate(
-    ribgg_url = sprintf(
-      'https://rib.gg/series/%s', 
-      id
-    )
+  inner_join(
+    events |> 
+      filter(type != 'event', !is.na(child_label)) |> 
+      filter(
+        short_name |> str_detect('Open', negate = TRUE)
+      ) |> 
+      distinct(event_id = id, region_id),
+    by = 'event_id'
   ) |> 
-  unnest_wider(c(team1, team2), names_sep = '_') |> 
-  select(id, team1_name, team2_name, start_date, ribgg_url)
-series_urls
-series_urls |> 
-  filter(
-    ribgg_url |> stringr::str_detect('faze-clan-vs-100-thieves')
-  ) |> 
-  pull(ribgg_url)
-series |> unnest_wider(c(team1, team2), names_sep = '_') |> select(team1_name)
+  unnest_wider(c(team1, team2), names_sep = '_') |>
+  transmute(
+    id,
+    event_id,
+    region_id,
+    event_name,
+    team1_name,
+    team2_name,
+    start_date
+  )
+filt_series |> 
+  filter(region_id == 3)
+
 matches <- load_valorant('matches')
 matches[[1]] |> names()
 
