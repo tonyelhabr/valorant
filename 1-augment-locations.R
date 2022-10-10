@@ -37,48 +37,7 @@ filt_series <- series |>
     team2_name,
     start_date
   )
-filt_series |> 
-  filter(region_id == 2)
 
-weltis_urls <- read_lines('c:/users/antho/downloads/data.txt')
-
-weltis_na_series_ids <- weltis_urls |> 
-  stringr::str_split('\\/') |> 
-  map(
-    ~pluck(.x, 6)
-  ) |> 
-  flatten_chr() |> 
-  as.integer()
-
-weltis_df <- tibble(
-  url = weltis_urls,
-  series_id = weltis_na_series_ids
-)
-
-id_diff1 <- setdiff(
-  weltis_na_series_ids,
-  filt_series |> 
-    filter(region_id == 2) |> 
-    pull(id)
-)
-id_diff2 <- setdiff(
-  filt_series |> 
-    filter(region_id == 2) |> 
-    pull(id),
-  weltis_na_series_ids
-)
-id_diff2
-
-filt_series |> 
-  filter(id %in% id_diff2) |> 
-  distinct(event_id, event_name)
-
-weltis_df |> 
-  filter(series_id %in% id_diff)
-
-
-weltis_na_ids
-weltis_na_ids[[1]]
 matches <- load_valorant('matches')
 matches[[1]] |> names()
 
