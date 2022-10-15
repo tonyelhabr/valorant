@@ -38,8 +38,17 @@ filt_series <- series |>
     start_date
   )
 
-matches <- load_valorant('matches')
-matches[[1]] |> names()
+clean_matches <- function(matches) {
+  filt_matches <- matches |> 
+    discard(
+      ~is.null(pluck(.x, 'id'))
+    )
+  match_ids <- filt_matches |> map_int(~pluck(.x, 'id'))
+  filt_matches <- filt_matches |> set_names(match_ids)
+  filt_matches
+}
+
+matches <- load_valorant('matches') |> clean_matches()
 
 map_pluck_matches <- function(element, f = map_int) {
   matches |> f(~pluck(.x, element))
@@ -51,9 +60,17 @@ tibble(
   team_2_id = map_pluck_matches('team2Id')
 )
 
-match_details <- load_valorant('match_details')
-match_ids <- match_details |> map_int(~pluck(.x, 'id'))
-match_details <- match_details |> set_names(match_ids)
+
+clean_match_details <- function(match_details) {
+  filt_match_details <- match_details |> 
+    discard(
+      ~is.null(pluck(.x, 'id'))
+    )
+  match_ids <- filt_match_details |> map_int(~pluck(.x, 'id'))
+  filt_match_details <- filt_match_details |> set_names(match_ids)
+  filt_match_details
+}
+match_details <- load_valorant('match_details') |> clean_match_details()
 
 prettify_match_details <- function(match_details, element) {
   match_details |> 
@@ -68,19 +85,19 @@ prettify_match_details <- function(match_details, element) {
 }
 
 ## TODO: calculate player differential and number of players remaining on one side
-events <- match_details |> 
+match_details_events <- match_details |> 
   prettify_match_details('events') |> 
   mutate(
     across(c(impact, matches('win_probability')), as.double)
   )
-events
+match_details_events
 
 economies <- match_details |> 
   prettify_match_details('economies') 
 
 locations <- match_details |> prettify_match_details('locations')
 
-match_locations <- events |> 
+match_locations <- match_details_events |> 
   select(
     match_id,
     round_id,
