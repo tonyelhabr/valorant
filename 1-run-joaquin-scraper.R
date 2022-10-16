@@ -33,10 +33,10 @@ series_ids <- series |>
     team2_name
   )
 
-tool_dir <- "C://Users//antho//Downloads//RIB Web Scraper v0.5//RIB Web Scraper v0.5"
+tool_dir <- file.path(getwd(), "src")
 setwd(tool_dir)
 scrape_series <- function(series_id) {
-  output_dir <- sprintf("C://Users//antho//Downloads//data//%s", series_id)
+  output_dir <- file.path(tool_dir, "data", series_id)
   if (fs::dir_exists(output_dir)) {
     message(sprintf("Returning early for %s.", series_id))
     return(NULL)
@@ -49,7 +49,7 @@ scrape_series <- function(series_id) {
   res <- system2("webscrape.exe")
   fs::dir_copy(
     data_dir,
-    sprintf("C://Users//antho//Downloads//ribgg//data//%s", series_id)
+    output_dir
   )
   fs::file_delete(txt_path)
   fs::dir_delete(data_dir)
@@ -57,6 +57,6 @@ scrape_series <- function(series_id) {
 }
 
 series_ids |> 
-  # filter(region_id == 2) |> 
+  # filter(region_id == 7) |> 
   pull(id) |> 
   walk(scrape_series)
