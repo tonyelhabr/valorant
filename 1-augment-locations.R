@@ -38,17 +38,12 @@ filt_series <- series |>
     start_date
   )
 
-clean_matches <- function(matches) {
-  filt_matches <- matches |> 
-    discard(
-      ~is.null(pluck(.x, 'id'))
-    )
-  match_ids <- filt_matches |> map_int(~pluck(.x, 'id'))
-  filt_matches <- filt_matches |> set_names(match_ids)
-  filt_matches
+set_names_from_id_element <- function(x) {
+  match_ids <- x |> map_int(~pluck(.x, "id"))
+  x |> set_names(match_ids)
 }
 
-matches <- load_valorant('matches') |> clean_matches()
+matches <- load_valorant('matches') |> set_names_from_id_element()
 
 map_pluck_matches <- function(element, f = map_int) {
   matches |> f(~pluck(.x, element))
@@ -60,17 +55,7 @@ tibble(
   team_2_id = map_pluck_matches('team2Id')
 )
 
-
-clean_match_details <- function(match_details) {
-  filt_match_details <- match_details |> 
-    discard(
-      ~is.null(pluck(.x, 'id'))
-    )
-  match_ids <- filt_match_details |> map_int(~pluck(.x, 'id'))
-  filt_match_details <- filt_match_details |> set_names(match_ids)
-  filt_match_details
-}
-match_details <- load_valorant('match_details') |> clean_match_details()
+match_details <- load_valorant('match_details') |> set_names_from_id_element()
 
 prettify_match_details <- function(match_details, element) {
   match_details |> 

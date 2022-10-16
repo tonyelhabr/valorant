@@ -17,11 +17,9 @@ series_ids <- series |>
   rename(event_id = eventId, start_date = startDate) |> 
   inner_join(
     events |> 
-      filter(
-        name |> str_detect('(Closed|Open) Qualifier', negate = TRUE)
-      ) |> 
-      filter(regionId %in% c(2, 7)) |> 
-      distinct(event_id = id, region_id = regionId, event_name = name),
+      inner_join(get_all_region_names(), by = 'regionId') |> 
+      filter(regionName %in% c('Europe', 'North America', 'International')) |> 
+      distinct(event_id = id, region_name = regionName, event_name = name),
     by = 'event_id'
   ) |> 
   unnest_wider(c(team1, team2), names_sep = '_') |>
@@ -29,24 +27,24 @@ series_ids <- series |>
     id, 
     event_id, 
     event_name,
-    region_id,
+    region_name,
     start_date,
     team1_name,
     team2_name
   )
 series_ids
 
-read_valorant_csvs <- function(name) {
+read_valorant_csvs <- function(name, ids) {
   tibble(
     path = fs::dir_ls('data', regexp = sprintf('%s[.]csv', name), recurse = TRUE)
   ) |> 
-    filter(basename(dirname(path)) %in% series_ids$id) |> 
+    filter(basename(dirname(path)) %in% ids) |> 
     pull(path) |> 
     map_dfr(read_csv, show_col_types = FALSE) |> 
     clean_names()
 }
-kills <- read_valorant_csvs('kill')
-econ <- read_valorant_csvs('econ')
+kills <- read_valorant_csvs('kill', series_ids$id)
+econ <- read_valorant_csvs('econ', series_ids$id)
 
 long_kills_h2h <- bind_rows(
   kills |> 
@@ -72,7 +70,7 @@ long_kills_h2h <- bind_rows(
     by = c('round_id', 'player_id')
   ) |> 
   left_join(
-    players |> hoist(data, 'ign') |> select(player_id, ign),
+    players |> select(player_id = id, ign),
     by = 'player_id'
   )
 long_kills_h2h
@@ -113,16 +111,3 @@ weapon_category_h2h_n <- weapon_h2h_n |>
   ) |> 
   arrange(desc(n))
 
-weapon_category_h2h_n <- wide_kills_h2h |> 
-  count(weapon_category_killer, weapon_category_victim) |> 
-  rename_all(~stringr::str_remove(.x, 'weapon_')) |> 
-  mutate(
-    killer_first = category_killer < category_victim,
-    weapons_are_same = killer == victim,
-    key = sprintf(
-      '%s-%s', 
-      ifelse(killer_first, category_killer, category_victim), 
-      ifelse(killer_first, category_victim, category_killer)
-    )
-  ) |> 
-  select(-killer_first)

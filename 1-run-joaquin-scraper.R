@@ -15,10 +15,9 @@ series_ids <- series |>
   rename(event_id = eventId, start_date = startDate) |> 
   inner_join(
     events |> 
-      filter(
-        name |> str_detect('(Closed|Open) Qualifier', negate = TRUE)
-      ) |> 
-      distinct(event_id = id, region_id = regionId, event_name = name),
+      inner_join(get_all_region_names(), by = 'regionId') |> 
+      filter(regionName %in% c('Europe', 'North America', 'International')) |> 
+      distinct(event_id = id, region_name = regionName, event_name = name),
     by = 'event_id'
   ) |> 
   unnest_wider(c(team1, team2), names_sep = '_') |>
@@ -26,7 +25,7 @@ series_ids <- series |>
     id, 
     event_id, 
     event_name,
-    region_id,
+    region_name,
     start_date,
     team1_name,
     team2_name
@@ -56,6 +55,5 @@ scrape_series <- function(series_id) {
 }
 
 series_ids |> 
-  filter(region_id == 1) |> 
   pull(id) |> 
   walk(scrape_series)
