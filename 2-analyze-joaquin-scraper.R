@@ -45,6 +45,72 @@ read_valorant_csvs <- function(name, ids) {
 }
 kills <- read_valorant_csvs('kill', series_ids$id)
 econ <- read_valorant_csvs('econ', series_ids$id)
+# events <- read_valorant_csvs('event', series_ids$id)
+
+weapon_ids <- get_all_weapon_names() |> clean_names()
+wide_h2h_kills <- kills |> 
+  mutate(
+    across(weapon, tolower)
+  ) |> 
+  drop_na(weapon) |> 
+  ## anything dropped here is due to ults being listed as a weapon
+  inner_join(
+    weapon_ids |> 
+      select(weapon = weapon_name, weapon_category), 
+    by = 'weapon'
+  ) |> 
+  rename(
+    killer_weapon = weapon, 
+    killer_weapon_category = weapon_category
+  ) |> 
+  # left_join(
+  #   econ |> 
+  #     select(round_id, killer_id = player_id), killer_weapon = weapon, killer_weapon_category = weapon_category),
+  #   by = c('round_id', 'killer_id')
+  # ) |> 
+  ## data doesn't list victim's actual weapon, so we use what they bought in their loadout
+  left_join(
+    econ |> 
+      select(round_id, victim_id = player_id, victim_weapon = weapon, victim_weapon_category = weapon_category),
+    by = c('round_id', 'victim_id')
+  ) |> 
+  left_join(
+    players |> select(killer_id = id, killer_ign = ign),
+    by = 'killer_id'
+  ) |> 
+  left_join(
+    players |> select(victim_id = id, victim_ign = ign),
+    by = 'victim_id'
+  ) |> 
+  select(
+    match_id,
+    kill_id,
+    round_id,
+    round_number,
+    killer_ign,
+    killer_weapon,
+    killer_weapon_category,
+    victim_ign,
+    victim_weapon,
+    victim_weapon_category
+  )
+
+rifle_rifle_win_rates_by_ign <- bind_rows(
+  wide_h2h_kills |> mutate(ign = killer_ign, is_killer = TRUE),
+  wide_h2h_kills |> mutate(ign = victim_ign, is_killer = FALSE)
+) |> 
+  filter(killer_weapon_category == 'rifle', victim_weapon_category == 'rifle') |> 
+  count(ign, is_killer, sort = TRUE) |> 
+  group_by(ign) |> 
+  mutate(total = sum(n), prop = n / total) |> 
+  ungroup() |> 
+  filter(is_killer) |>
+  select(-is_killer) |> 
+  arrange(desc(prop))
+rifle_rifle_win_rates_by_ign |> 
+  mutate(rnk = row_number(desc(prop))) |> 
+  filter(total >= 250) |> 
+  view()
 
 long_kills_h2h <- bind_rows(
   kills |> 
@@ -73,7 +139,6 @@ long_kills_h2h <- bind_rows(
     players |> select(player_id = id, ign),
     by = 'player_id'
   )
-long_kills_h2h
 
 wide_kills_h2h <- long_kills_h2h |> 
   pivot_wider(
@@ -82,7 +147,7 @@ wide_kills_h2h <- long_kills_h2h |>
   )
 
 init_weapon_h2h_n <- wide_kills_h2h |> 
-  count(weapon_killer, weapon_category_killer, weapon_victim, weapon_category_victim) |> 
+  count(player_id_killer, weapon_killer, weapon_category_killer, weapon_victim, weapon_category_victim) |> 
   rename_all(~stringr::str_remove(.x, 'weapon_')) |> 
   mutate(
     killer_first = killer < victim,
