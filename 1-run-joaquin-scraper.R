@@ -16,13 +16,13 @@ series_ids <- series |>
   inner_join(
     events |> 
       inner_join(get_all_region_names(), by = 'regionId') |> 
-      filter(regionName %in% c('Europe', 'North America', 'International')) |> 
+      # filter(!(regionName %in% c('Europe', 'North America', 'International'))) |> 
       distinct(event_id = id, region_name = regionName, event_name = name),
     by = 'event_id'
   ) |> 
   unnest_wider(c(team1, team2), names_sep = '_') |>
   select(
-    id, 
+    series_id = id, 
     event_id, 
     event_name,
     region_name,
@@ -30,6 +30,9 @@ series_ids <- series |>
     team1_name,
     team2_name
   )
+## these don't get scraped correctly for some reason
+series_ids |> 
+  filter(series_id %in% c(22286, 23033, 26911, 37052))
 
 tool_dir <- file.path(getwd(), 'src')
 setwd(tool_dir)
@@ -55,5 +58,12 @@ scrape_series <- function(series_id) {
 }
 
 series_ids |> 
-  pull(id) |> 
+  pull(series_id) |> 
   walk(scrape_series)
+
+# fs::dir_ls(
+#   '../data',
+#   type = 'directory'
+# ) |>
+#   keep(~length(dir(.x)) == 0) |>
+#   walk(fs::dir_delete)
